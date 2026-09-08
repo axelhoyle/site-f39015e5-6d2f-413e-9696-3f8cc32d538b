@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Salong Lund — frisör i Östermalm, Stockholm. Design-koncept publicerat via AIOS.">
+<title>Salong Lund</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..500&family=Archivo:ital,wght@0,400;0,500;0,600;1,400&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #efebe1;
+    --paper-2: #e7e0d0;
+    --paper-3: #ded5c0;
+    --ink: #211c15;
+    --ink-dim: #5f5646;
+    --ink-faint: #948a74;
+    --stone: #cfc6b1;
+    --oxblood: #7c2536;
+    --oxblood-bright: #9c3346;
+    --oxblood-tint: rgba(124, 37, 54, 0.1);
+
+    --font-display: 'Bodoni Moda', 'Didot', 'Bodoni MT', Georgia, serif;
+    --font-body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: auto; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 3.5rem); }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  ::selection { background: var(--oxblood); color: var(--paper); }
+  a:focus-visible, button:focus-visible { outline: 1.5px solid var(--oxblood-bright); outline-offset: 4px; }
+
+  /* ---------------------------------- scroll progress ---------------------------------- */
+
+  .scroll-progress {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    z-index: 60;
+    background: var(--stone);
+    transform-origin: 0 50%;
+  }
+  .scroll-progress span {
+    display: block; height: 100%; width: 100%;
+    background: var(--oxblood);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    will-change: transform;
+  }
+
+  /* ---------------------------------- header ---------------------------------- */
+
+  .site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.6rem clamp(1.25rem, 4vw, 3.5rem);
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.4s ease, border-color 0.4s ease, padding 0.4s ease;
+  }
+  .site-header.is-scrolled {
+    background: rgba(239, 235, 225, 0.88);
+    backdrop-filter: blur(10px);
+    border-bottom-color: var(--stone);
+    padding-top: 1.05rem; padding-bottom: 1.05rem;
+  }
+  .header-mark {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .header-mark.is-visible { opacity: 1; transform: translateY(0); }
+  .header-nav { display: flex; align-items: center; gap: clamp(1.25rem, 3vw, 2.75rem); }
+  .header-nav a.nav-link {
+    text-decoration: none; font-size: 0.78rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim);
+    position: relative; padding-bottom: 0.2rem;
+  }
+  .header-nav a.nav-link::after {
+    content: ''; position: absolute; left: 0; right: 100%; bottom: 0;
+    height: 1px; background: var(--oxblood); transition: right 0.3s ease;
+  }
+  .header-nav a.nav-link:hover::after, .header-nav a.nav-link:focus-visible::after { right: 0; }
+  .header-nav a.nav-link:hover, .header-nav a.nav-link:focus-visible { color: var(--ink); }
+
+  .btn-book {
+    display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;
+    border: 1px solid var(--oxblood); color: var(--ink);
+    background: transparent; padding: 0.65rem 1.35rem;
+    font-size: 0.76rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .btn-book:hover, .btn-book:focus-visible { background: var(--oxblood); color: var(--paper); }
+
+  /* ---------------------------------- hero ---------------------------------- */
+
+  .hero-pin-spacer {
+    position: relative;
+    height: calc(100svh + 560px); /* 560px extra = the scroll budget the signature fill consumes while pinned; keep in sync with SIGNATURE_SCROLL_PX in JS */
+  }
+  @media (prefers-reduced-motion: reduce) { .hero-pin-spacer { height: 100svh; } }
+
+  .hero {
+    position: sticky; top: 0; height: 100svh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 7rem 1.5rem 4rem; overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) { .hero { position: static; } }
+  .hero canvas {
+    position: absolute; inset: -6% -6%; width: 112%; height: 112%;
+    opacity: 0.85; will-change: transform;
+    display: none;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url('uploads/customer-hero-1788891658347.png');
+    background-size: cover;
+    background-position: 51% 47%;
+    background-repeat: no-repeat;
+  }
+  .hero-veil {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 42%, rgba(239,235,225,0) 0%, rgba(239,235,225,0.35) 58%, rgba(239,235,225,0.94) 100%);
+  }
+  .hero-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; will-change: transform, opacity; }
+  .hero-eyebrow { font-size: 0.74rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 1.2rem; }
+
+  .signature-wrap {
+    position: relative;
+    display: inline-block;
+    font-family: 'Mrs Saint Delafield', 'Segoe Script', cursive;
+    font-size: clamp(5.5rem, 16vw, 11rem);
+    line-height: 1.4;
+  }
+  .signature-text {
+    display: block;
+    font: inherit;
+    padding: 0.35em 0.5em 0.08em 0.5em;
+    text-align: center;
+    background-image: linear-gradient(90deg,
+      var(--oxblood) 0%, var(--oxblood) var(--fill, 0%),
+      var(--stone) var(--fill, 0%), var(--stone) 100%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: var(--stone); /* fallback if background-clip:text isn't supported */
+    -webkit-text-fill-color: transparent;
+  }
+  @supports not (background-clip: text) {
+    .signature-text { color: var(--stone); -webkit-text-fill-color: initial; }
+  }
+  .signature-tip {
+    position: absolute;
+    top: 18%;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--oxblood);
+    box-shadow: 0 0 0 5px var(--oxblood-tint);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) { .signature-tip { display: none; } }
+
+  .hero-line {
+    font-family: var(--font-display); font-style: italic; font-weight: 400;
+    font-size: clamp(1.15rem, 2.4vw, 1.55rem); color: var(--oxblood);
+    margin-top: 1.3rem;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .hero-line.is-visible { opacity: 1; transform: translateY(0); }
+  .hero-actions {
+    display: flex; flex-direction: column; align-items: center; gap: 0.9rem; margin-top: 1.3rem;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
+  }
+  .hero-actions.is-visible { opacity: 1; transform: translateY(0); }
+  .hero-actions small { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-line, .hero-actions { opacity: 1; transform: none; transition: none; }
+  }
+
+  .scroll-cue { position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%); width: 1px; height: 3.2rem; background: linear-gradient(var(--ink-faint), transparent); transition: opacity 0.4s ease; }
+  .scroll-cue::after {
+    content: ''; position: absolute; top: 0; left: -1.5px; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--oxblood); animation: cue-drop 2.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .scroll-cue::after { animation: none; top: 40%; } }
+  @keyframes cue-drop { 0% { top: 0; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { top: 90%; opacity: 0; } }
+
+  /* ---------------------------------- shared chrome ---------------------------------- */
+
+  section.block { padding: clamp(5rem, 10vw, 8.5rem) 0; }
+
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.85s cubic-bezier(.16,.8,.24,1), transform 0.85s cubic-bezier(.16,.8,.24,1); transition-delay: var(--reveal-delay, 0s); }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  .reveal-left { transform: translateX(-28px); }
+  .reveal-left.is-visible { transform: translateX(0); }
+  .reveal-right { transform: translateX(28px); }
+  .reveal-right.is-visible { transform: translateX(0); }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+  /* ---------------------------------- philosophy ---------------------------------- */
+
+  .philosophy-grid { display: grid; grid-template-columns: 0.85fr 1.6fr; gap: clamp(2rem, 6vw, 5rem); align-items: start; }
+  .philosophy-sticky { position: sticky; top: 8.5rem; }
+  .philosophy-quote { font-family: var(--font-display); font-size: clamp(1.7rem, 3.4vw, 2.6rem); line-height: 1.3; color: var(--ink); }
+  .philosophy-quote em { color: var(--oxblood); font-style: italic; }
+  .philosophy-body { margin-top: 1.8rem; max-width: 58ch; color: var(--ink-dim); font-size: 1.02rem; }
+  .read-line { position: relative; width: 1px; height: 100%; background: var(--stone); position: absolute; left: -2rem; top: 0; display: none; }
+
+  /* ---------------------------------- founder ---------------------------------- */
+
+  .founder { background: var(--paper-2); border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); }
+  .founder-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(2.5rem, 6vw, 6rem); align-items: center; }
+  .founder-name { font-size: clamp(2.6rem, 6vw, 4.4rem); margin: 0.4rem 0 1.4rem; }
+  .founder-bio { color: var(--ink-dim); font-size: 1.05rem; max-width: 52ch; }
+  .founder-facts { display: flex; flex-direction: column; border-top: 1px solid var(--stone); }
+  .founder-facts dl { display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem; margin: 0; padding: 1.05rem 0; border-bottom: 1px solid var(--stone); }
+  .founder-facts dt { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+  .founder-facts dd { margin: 0; text-align: right; font-family: var(--font-display); font-size: 1.15rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ---------------------------------- services menu ---------------------------------- */
+
+  .menu-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; margin-bottom: clamp(2.5rem, 6vw, 4rem); }
+  .menu-title { font-size: clamp(2.2rem, 5vw, 3.4rem); }
+  .menu-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(2.5rem, 5vw, 3.5rem); }
+  .menu-group h3 { font-size: 0.76rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--oxblood); font-family: var(--font-body); margin-bottom: 1.4rem; }
+  .menu-item { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.85rem 0; border-bottom: 1px solid var(--stone); }
+  .menu-item .name { font-size: 1rem; color: var(--ink); }
+  .menu-item .leader { flex: 1; border-bottom: 1px dotted var(--ink-faint); transform: translateY(-0.35em); opacity: 0.55; }
+  .menu-item .price { font-variant-numeric: tabular-nums; color: var(--ink-dim); font-size: 0.95rem; white-space: nowrap; }
+  .menu-note { margin-top: 2.5rem; font-size: 0.85rem; color: var(--ink-faint); max-width: 46ch; }
+
+  /* ---------------------------------- booking ---------------------------------- */
+
+  .booking { background: var(--paper-2); border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); }
+  .booking-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; margin-bottom: clamp(2.5rem, 6vw, 4rem); }
+  .booking-title { font-size: clamp(2.2rem, 5vw, 3.4rem); }
+  .booking-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.75rem, 2vw, 1.5rem); }
+  .booking-day-label { text-align: center; margin-bottom: 1rem; }
+  .booking-day-label .d { font-family: var(--font-body); font-size: 0.76rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); }
+  .booking-day-label .date { display: block; font-size: 0.74rem; color: var(--ink-faint); margin-top: 0.15rem; }
+  .booking-slots { display: flex; flex-direction: column; gap: 0.55rem; }
+  .slot-btn {
+    font-family: var(--font-body); font-variant-numeric: tabular-nums;
+    font-size: 0.86rem; padding: 0.55rem 0.4rem; text-align: center;
+    border: 1px solid var(--stone); background: transparent; color: var(--ink);
+    cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .slot-btn:hover:not(:disabled) { border-color: var(--oxblood); }
+  .slot-btn:disabled { color: var(--ink-faint); border-color: var(--stone); opacity: 0.45; cursor: default; text-decoration: line-through; }
+  .slot-btn.is-selected { background: var(--oxblood); border-color: var(--oxblood); color: var(--paper); }
+
+  /* ---------------------------------- fake third-party widget mockup ----------------------------------
+     Deliberately NOT Lund's own design language (different fonts, different
+     colors, rounder corners) — the whole point is to show how it would jar
+     against the rest of the site. Invented colors "in the style of" a
+     generic booking SaaS, not a real screenshot or copy of anyone's actual
+     product — labeled as such inside itself too. */
+  .bd-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(15, 20, 18, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .bd-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .bd-modal {
+    width: 100%; max-width: 380px;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    transform: translateY(14px) scale(0.98);
+    transition: transform 0.25s ease;
+  }
+  .bd-backdrop.is-open .bd-modal { transform: translateY(0) scale(1); }
+  .bd-header {
+    background: #0f4c3d; color: #fff;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .bd-brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+  .bd-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: #4fd8a8; }
+  .bd-close { background: none; border: 0; color: rgba(255,255,255,0.8); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.25rem; }
+  .bd-close:hover { color: #fff; }
+  .bd-body { padding: 1.25rem 1.25rem 1.5rem; }
+  .bd-disclaimer {
+    font-size: 0.68rem; color: #8a8f8d; background: #f2f4f3;
+    border-radius: 6px; padding: 0.45rem 0.6rem; margin-bottom: 1rem;
+    line-height: 1.4;
+  }
+  .bd-slot-summary { font-size: 0.95rem; color: #16211c; margin-bottom: 1rem; }
+  .bd-slot-summary strong { display: block; font-size: 1.05rem; margin-bottom: 0.15rem; }
+  .bd-field { margin-bottom: 0.85rem; }
+  .bd-field label { display: block; font-size: 0.76rem; color: #5b625f; margin-bottom: 0.3rem; }
+  .bd-field input {
+    width: 100%; box-sizing: border-box;
+    border: 1px solid #d7dcda; border-radius: 8px;
+    padding: 0.6rem 0.7rem; font-size: 0.92rem; font-family: inherit; color: #16211c;
+  }
+  .bd-field input:focus { outline: none; border-color: #0f4c3d; box-shadow: 0 0 0 3px rgba(15,76,61,0.14); }
+  .bd-confirm-btn {
+    width: 100%; border: 0; border-radius: 8px;
+    background: #0f4c3d; color: #fff;
+    padding: 0.8rem; font-size: 0.95rem; font-weight: 600; font-family: inherit;
+    cursor: pointer; margin-top: 0.3rem;
+    transition: background-color 0.2s ease;
+  }
+  .bd-confirm-btn:hover { background: #123f34; }
+  .bd-success { display: none; text-align: center; padding: 0.5rem 0 0.25rem; }
+  .bd-success .check {
+    width: 42px; height: 42px; border-radius: 50%; background: #e6f6ef; color: #0f4c3d;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-size: 1.3rem;
+  }
+  .bd-success p { font-size: 0.92rem; color: #16211c; margin-bottom: 0.3rem; }
+  .bd-success .fine { font-size: 0.76rem; color: #8a8f8d; }
+  .bd-backdrop.is-done .bd-form { display: none; }
+  .bd-backdrop.is-done .bd-success { display: block; }
+
+  @media (max-width: 860px) {
+    .booking-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; }
+    .slot-btn { font-size: 0.72rem; padding: 0.45rem 0.15rem; }
+    .booking-day-label .d { font-size: 0.62rem; }
+  }
+  @media (max-width: 620px) {
+    .booking-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    .booking-slots { flex-direction: row; flex-wrap: wrap; }
+    .slot-btn { flex: 1 1 30%; }
+  }
+
+  /* ---------------------------------- reviews ---------------------------------- */
+
+  .reviews { background: var(--paper-2); border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); }
+  .reviews-top { display: flex; align-items: baseline; gap: clamp(1.5rem, 4vw, 3rem); flex-wrap: wrap; margin-bottom: clamp(2.5rem, 6vw, 4rem); }
+  .rating-number { font-family: var(--font-display); font-size: clamp(3.2rem, 7vw, 5rem); line-height: 1; font-variant-numeric: tabular-nums; }
+  .rating-side { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .stars { display: inline-flex; gap: 0.28rem; }
+  .star { position: relative; width: 1.15rem; height: 1.15rem; }
+  .star svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .star .bg path { fill: none; stroke: var(--ink-faint); stroke-width: 1.2; }
+  .star .fg { position: absolute; inset: 0; overflow: hidden; }
+  .star .fg path { fill: var(--oxblood); }
+  .star-filled path { fill: var(--oxblood); }
+  .star-outline path { fill: none; stroke: var(--ink-faint); stroke-width: 1.2; }
+  .rating-count { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+
+  .review-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.75rem, 4vw, 2.75rem); }
+  .review-card { display: flex; flex-direction: column; gap: 1.1rem; }
+  .review-card .stars .star { width: 0.85rem; height: 0.85rem; }
+  .review-card p.quote { font-family: var(--font-display); font-style: italic; font-size: 1.12rem; line-height: 1.5; color: var(--ink); }
+  .review-source {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.78rem; color: var(--ink);
+    text-decoration: underline; text-decoration-color: var(--stone); text-underline-offset: 3px;
+    width: fit-content;
+  }
+  .review-source:hover, .review-source:focus-visible { text-decoration-color: var(--oxblood); }
+  .rating-source {
+    font-size: 0.78rem; color: var(--ink); text-decoration: underline;
+    text-decoration-color: var(--stone); text-underline-offset: 3px;
+  }
+  .rating-source:hover, .rating-source:focus-visible { text-decoration-color: var(--oxblood); }
+
+  /* ---------------------------------- visit ---------------------------------- */
+
+  .visit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2.5rem, 6vw, 5rem); }
+  .visit-block h3 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-faint); font-family: var(--font-body); margin-bottom: 1rem; }
+  .visit-block address, .visit-block p { font-style: normal; color: var(--ink); font-size: 1.05rem; line-height: 1.8; }
+  .hours-table { width: 100%; border-collapse: collapse; margin-top: 0.2rem; }
+  .hours-table td { padding: 0.55rem 0; border-bottom: 1px solid var(--stone); font-size: 0.98rem; }
+  .hours-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+
+  /* ---------------------------------- footer ---------------------------------- */
+
+  .site-footer {
+    padding: 3rem clamp(1.25rem, 4vw, 3.5rem) 3.5rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    border-top: 1px solid var(--stone);
+  }
+  .site-footer .mark { font-family: var(--font-display); font-size: 1.1rem; }
+  .site-footer .fine { font-size: 0.76rem; color: var(--ink-faint); letter-spacing: 0.04em; }
+
+  /* ---------------------------------- responsive ---------------------------------- */
+
+  @media (max-width: 860px) {
+    .header-nav .nav-links { display: none; }
+    .philosophy-grid, .founder-grid, .visit-grid { grid-template-columns: 1fr; }
+    .philosophy-sticky { position: static; }
+    .menu-groups { grid-template-columns: 1fr; }
+    .review-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    .reviews-top { flex-direction: column; align-items: flex-start; gap: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+<div class="scroll-progress"><span id="scrollProgressBar"></span></div>
+
+<header class="site-header" id="siteHeader">
+  <div class="header-mark" id="headerMark">LUND</div>
+  <nav class="header-nav">
+    <div class="nav-links" style="display:flex; gap:2rem;">
+      <a class="nav-link" href="#filosofi">Filosofi</a>
+      <a class="nav-link" href="#tjanster">Tjänster</a>
+      <a class="nav-link" href="#omdomen">Omdömen</a>
+      <a class="nav-link" href="#besok">Besök</a>
+    </div>
+    <!--FIELD:booking_url--><a class="btn-book" href="#boka">Boka tid</a><!--/FIELD:booking_url-->
+  </nav>
+</header>
+
+<main>
+  <div class="hero-pin-spacer" id="heroPinSpacer">
+    <section class="hero">
+      <canvas id="strandCanvas" aria-hidden="true"></canvas>
+      <div class="hero-veil" aria-hidden="true"></div>
+      <div class="hero-inner" id="heroInner">
+        <p class="hero-eyebrow">Frisör &amp; färgstudio — Östermalm, Stockholm</p>
+        <h1 class="signature-wrap" id="signatureWrap">
+          <span class="signature-text" id="signatureText">Lund</span>
+          <span class="signature-tip" id="signatureTip" aria-hidden="true"></span>
+        </h1>
+        <p class="hero-line" id="heroLine">Ett snitt är ett beslut.</p>
+        <div class="hero-actions" id="heroActions">
+          <a class="btn-book" href="#boka">Boka tid</a>
+          <small>Endast bokning — ingen drop-in</small>
+        </div>
+      </div>
+      <div class="scroll-cue" id="scrollCue" aria-hidden="true"></div>
+    </section>
+  </div>
+
+  <section class="block" id="filosofi">
+    <div class="container philosophy-grid">
+      <div class="philosophy-sticky reveal reveal-left"><p class="eyebrow">Filosofi</p></div>
+      <div class="reveal reveal-right" style="--reveal-delay:0.1s;">
+        <p class="philosophy-quote">Vi klipper inte hår. Vi tar bort det som är <em>i vägen</em> för formen som redan finns där.</p>
+        <p class="philosophy-body">Ingen konsultation börjar med en katalog. Den börjar med en fråga: hur sover du, hur föner du, vad orkar du göra en tisdagsmorgon. Formen byggs efter svaret — inte efter vad som är på tapeten just nu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="founder">
+    <div class="container">
+      <div class="founder-grid">
+        <div class="reveal reveal-left">
+          <p class="eyebrow">Grundare</p>
+          <h2 class="founder-name">Klara Lund</h2>
+          <p class="founder-bio">Klara har klippt hår i arton år — sex av dem hos Vidal Sassoon i London, tre på Bob Salon i Köpenhamn — innan hon öppnade sin egen stol på Östermalm 2019. Hon tar sex kunder per dag. Aldrig fler.</p>
+        </div>
+        <dl class="founder-facts reveal reveal-right" style="--reveal-delay:0.15s;">
+          <div><dt>År i yrket</dt><dd data-count-to="18">0</dd></div>
+          <div><dt>Utbildad</dt><dd>Vidal Sassoon, London</dd></div>
+          <div><dt>Kunder / dag</dt><dd>Max <span data-count-to="6">0</span></dd></div>
+          <div><dt>Specialitet</dt><dd>Fri-form &amp; lowlights</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="tjanster">
+    <div class="container">
+      <div class="menu-head reveal">
+        <h2 class="menu-title">Tjänster</h2>
+        <p class="eyebrow">Priser inkl. moms</p>
+      </div>
+      <div class="menu-groups">
+        <div class="menu-group reveal" style="--reveal-delay:0s;">
+          <h3>Klippning</h3>
+          <div class="menu-item"><span class="name">Konsultation</span><span class="leader"></span><span class="price">300 kr</span></div>
+          <div class="menu-item"><span class="name">Damklippning</span><span class="leader"></span><span class="price">890 kr</span></div>
+          <div class="menu-item"><span class="name">Herrklippning</span><span class="leader"></span><span class="price">650 kr</span></div>
+          <div class="menu-item"><span class="name">Klippning + styling</span><span class="leader"></span><span class="price">1 190 kr</span></div>
+        </div>
+        <div class="menu-group reveal" style="--reveal-delay:0.12s;">
+          <h3>Färg</h3>
+          <div class="menu-item"><span class="name">Helfärgning</span><span class="leader"></span><span class="price">från 1 690 kr</span></div>
+          <div class="menu-item"><span class="name">Slingor / balayage</span><span class="leader"></span><span class="price">från 2 400 kr</span></div>
+          <div class="menu-item"><span class="name">Toning</span><span class="leader"></span><span class="price">890 kr</span></div>
+          <div class="menu-item"><span class="name">Olaplex-behandling</span><span class="leader"></span><span class="price">+490 kr</span></div>
+        </div>
+        <div class="menu-group reveal" style="--reveal-delay:0.24s;">
+          <h3>Styling</h3>
+          <div class="menu-item"><span class="name">Föning</span><span class="leader"></span><span class="price">550 kr</span></div>
+          <div class="menu-item"><span class="name">Uppsättning</span><span class="leader"></span><span class="price">från 1 200 kr</span></div>
+        </div>
+      </div>
+      <p class="menu-note reveal">Konsultationsavgiften dras av vid bokad behandling samma dag. Priser gäller hos Klara — övriga stilister prissätts individuellt vid bokning.</p>
+    </div>
+  </section>
+
+  <section class="booking block" id="boka">
+    <div class="container">
+      <div class="booking-head reveal">
+        <h2 class="booking-title">Boka tid</h2>
+        <p class="eyebrow">Denna vecka — hos Klara</p>
+      </div>
+      <div class="booking-grid reveal" id="bookingGrid"></div>
+    </div>
+  </section>
+
+  <div class="bd-backdrop" id="bdBackdrop">
+    <div class="bd-modal" role="dialog" aria-modal="true" aria-label="Bokning">
+      <div class="bd-header">
+        <div class="bd-brand"><span class="dot" aria-hidden="true"></span>bokadirekt</div>
+        <button class="bd-close" id="bdClose" type="button" aria-label="Stäng">&times;</button>
+      </div>
+      <div class="bd-body">
+        <p class="bd-disclaimer">Exempel — påhittat utseende, inte Bokadirekts verkliga design. Ingen riktig bokning skapas.</p>
+        <div class="bd-form">
+          <div class="bd-slot-summary">
+            <strong id="bdSlotLine">—</strong>
+            Klippning hos Klara Lund
+          </div>
+          <div class="bd-field"><label for="bdName">Namn</label><input id="bdName" type="text" placeholder="För- och efternamn"></div>
+          <div class="bd-field"><label for="bdPhone">Telefonnummer</label><input id="bdPhone" type="tel" placeholder="07X-XXX XX XX"></div>
+          <button class="bd-confirm-btn" id="bdConfirm" type="button">Bekräfta bokning</button>
+        </div>
+        <div class="bd-success">
+          <div class="check" aria-hidden="true">&#10003;</div>
+          <p id="bdSuccessLine">Bokat!</p>
+          <p class="fine">En bekräftelse skickas via SMS.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="reviews block" id="omdomen">
+    <div class="container">
+      <p class="eyebrow reveal">Omdömen</p>
+      <div class="reviews-top reveal">
+        <div class="rating-number" data-count-to="4.9" data-decimals="1">0.0</div>
+        <div class="rating-side">
+          <span class="stars" data-rating="4.9" aria-label="4,9 av 5 stjärnor"></span>
+          <span class="rating-count">128 recensioner · <a class="rating-source" href="https://search.google.com/local/reviews?placeid=DEMO_PLACE_ID_SALONG_LUND" target="_blank" rel="noopener">se alla på Google</a></span>
+        </div>
+      </div>
+      <div class="review-grid">
+        <div class="review-card reveal" style="--reveal-delay:0s;">
+          <span class="stars" data-rating="5"></span>
+          <p class="quote">"Bästa klippningen jag haft i Stockholm — Klara lyssnar först, klipper sen."</p>
+          <a class="review-source" href="https://search.google.com/local/reviews?placeid=DEMO_PLACE_ID_SALONG_LUND" target="_blank" rel="noopener">Google-recension →</a>
+        </div>
+        <div class="review-card reveal" style="--reveal-delay:0.12s;">
+          <span class="stars" data-rating="5"></span>
+          <p class="quote">"Kändes som ett museibesök, inte en frisörtid. Håret är fortfarande perfekt tre veckor senare."</p>
+          <a class="review-source" href="https://search.google.com/local/reviews?placeid=DEMO_PLACE_ID_SALONG_LUND" target="_blank" rel="noopener">Google-recension →</a>
+        </div>
+        <div class="review-card reveal" style="--reveal-delay:0.24s;">
+          <span class="stars" data-rating="5"></span>
+          <p class="quote">"Ingen småprat jag inte bad om, ingen produktförsäljning. Bara ett riktigt bra klipp."</p>
+          <a class="review-source" href="https://search.google.com/local/reviews?placeid=DEMO_PLACE_ID_SALONG_LUND" target="_blank" rel="noopener">Google-recension →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="besok">
+    <div class="container">
+      <p class="eyebrow reveal" style="margin-bottom:2.5rem;">Besök</p>
+      <div class="visit-grid">
+        <div class="visit-block reveal reveal-left">
+          <h3>Adress</h3>
+          <!--FIELD:address--><address>Rådjursvägen 4<br>114 42 Östermalm, Stockholm</address><!--/FIELD:address-->
+          <p style="margin-top:1.2rem;"><!--FIELD:phone-->08-611 22 30<!--/FIELD:phone--><br><!--FIELD:email-->boka@salonglund.se<!--/FIELD:email--></p>
+        </div>
+        <div class="visit-block reveal reveal-right" style="--reveal-delay:0.1s;">
+          <h3>Öppettider</h3>
+          <!--FIELD:opening_hours--><table class="hours-table">
+            <tr><td>Tisdag–Fredag</td><td>10:00–19:00</td></tr>
+            <tr><td>Lördag–Söndag</td><td>Stängt</td></tr>
+            <tr><td>Måndag</td><td>Stängt</td></tr>
+          </table><!--/FIELD:opening_hours-->
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <span class="mark">LUND</span>
+  <span class="fine">© 2026 Salong Lund · Östermalm, Stockholm</span>
+</footer>
+
+<script>
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- scroll progress + header state + hero parallax (single rAF loop) ---------- */
+  var progressBar = document.getElementById('scrollProgressBar');
+  var header = document.getElementById('siteHeader');
+  var headerMark = document.getElementById('headerMark');
+  var heroInner = document.getElementById('heroInner');
+  var canvas = document.getElementById('strandCanvas');
+  var hero = document.querySelector('.hero');
+  var ctx = canvas.getContext('2d');
+
+  var signatureText = document.getElementById('signatureText');
+  var signatureTip = document.getElementById('signatureTip');
+  var signatureWrap = document.getElementById('signatureWrap');
+  var heroLine = document.getElementById('heroLine');
+  var heroActions = document.getElementById('heroActions');
+  var scrollCue = document.getElementById('scrollCue');
+
+  // ~2 scroll gestures' worth of distance — the whole point is that it's over fast.
+  var SIGNATURE_SCROLL_PX = 560;
+
+  if (reduceMotion) {
+    signatureText.style.setProperty('--fill', '100%');
+    heroLine.classList.add('is-visible');
+    heroActions.classList.add('is-visible');
+  }
+
+  function onScrollFrame() {
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var frac = max > 0 ? window.scrollY / max : 0;
+    progressBar.style.transform = 'scaleX(' + frac + ')';
+    header.classList.toggle('is-scrolled', window.scrollY > 40);
+
+    var sigProgress = 0;
+    if (!reduceMotion) {
+      sigProgress = Math.min(1, window.scrollY / SIGNATURE_SCROLL_PX);
+      signatureText.style.setProperty('--fill', (sigProgress * 100) + '%');
+
+      if (sigProgress > 0 && sigProgress < 1) {
+        var wrapW = signatureWrap.offsetWidth;
+        signatureTip.style.left = (sigProgress * wrapW) + 'px';
+        signatureTip.style.opacity = '1';
+      } else {
+        signatureTip.style.opacity = '0';
+      }
+
+      var textProgress = Math.max(0, Math.min(1, (sigProgress - 0.7) / 0.3));
+      heroLine.classList.toggle('is-visible', textProgress > 0.05);
+      heroActions.classList.toggle('is-visible', textProgress > 0.3);
+      scrollCue.style.opacity = sigProgress > 0.03 ? '0' : '1';
+    }
+
+    // Hero parallax only kicks in once the signature has finished writing —
+    // scrolling past that point exits the hero as before.
+    var effectiveScroll = Math.max(0, window.scrollY - SIGNATURE_SCROLL_PX);
+    var heroH = hero.offsetHeight;
+    var heroFrac = Math.min(1, effectiveScroll / (heroH * 0.7));
+    headerMark.classList.toggle('is-visible', heroFrac > 0.7);
+
+    if (!reduceMotion) {
+      heroInner.style.transform = 'translateY(' + (heroFrac * 60) + 'px)';
+      heroInner.style.opacity = String(1 - heroFrac * 1.1);
+      canvas.style.transform = 'translateY(' + (window.scrollY * 0.18) + 'px)';
+    }
+  }
+  window.addEventListener('scroll', onScrollFrame, { passive: true });
+  onScrollFrame();
+
+  /* ---------- reveal on scroll (staggered via --reveal-delay, respects reduced motion) ---------- */
+  var revealEls = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && !reduceMotion) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    revealEls.forEach(function (el) { io.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('is-visible'); });
+  }
+
+  /* ---------- count-up numbers, triggered alongside their reveal ---------- */
+  function countUp(el) {
+    var target = parseFloat(el.getAttribute('data-count-to'));
+    var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+    if (reduceMotion) { el.textContent = target.toFixed(decimals); return; }
+    var duration = 1100, start = null;
+    function step(ts) {
+      if (start === null) start = ts;
+      var p = Math.min(1, (ts - start) / duration);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = (target * eased).toFixed(decimals);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  var countEls = document.querySelectorAll('[data-count-to]');
+  if ('IntersectionObserver' in window) {
+    var ioCount = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { countUp(entry.target); ioCount.unobserve(entry.target); }
+      });
+    }, { threshold: 0.6 });
+    countEls.forEach(function (el) { ioCount.observe(el); });
+  } else {
+    countEls.forEach(function (el) { el.textContent = el.getAttribute('data-count-to'); });
+  }
+
+  /* ---------- stars: whole stars render as one plain filled/outline SVG each
+     (no clip-path, nothing that can fail to apply) — only a genuinely
+     fractional star (e.g. the 4.9 average) uses a partial-fill layer, with
+     its clip-path baked in at creation time, not set later by any observer
+     or animation frame. ---------- */
+  var STAR_PATH = 'M12 2.4l2.79 6.24 6.8.62-5.16 4.55 1.54 6.67L12 16.98l-6 3.5 1.54-6.67-5.16-4.55 6.8-.62L12 2.4z';
+  document.querySelectorAll('.stars[data-rating]').forEach(function (el) {
+    var rating = parseFloat(el.getAttribute('data-rating')) || 0;
+    for (var i = 0; i < 5; i++) {
+      var fillPct = Math.max(0, Math.min(1, rating - i)) * 100;
+      var wrap = document.createElement('span');
+      wrap.className = 'star';
+      if (fillPct >= 99.5) {
+        wrap.innerHTML = '<svg class="star-filled" viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>';
+      } else if (fillPct <= 0.5) {
+        wrap.innerHTML = '<svg class="star-outline" viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>';
+      } else {
+        wrap.innerHTML =
+          '<svg class="bg" viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>' +
+          '<span class="fg" style="clip-path: inset(0 ' + (100 - fillPct) + '% 0 0);">' +
+            '<svg viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>' +
+          '</span>';
+      }
+      el.appendChild(wrap);
+    }
+  });
+
+  /* ---------- booking calendar — connected to our own booking API
+     (2026-09-08): a click really POSTs to /bookings/:companyId on our own
+     backend and the slot is disabled for everyone from then on. No
+     third-party widget, no AI/agent call involved — just a normal
+     database write. ---------- */
+  var COMPANY_ID = 'f39015e5-6d2f-413e-9696-3f8cc32d538b';
+  var API_BASE = 'http://localhost:3000';
+  var slotButtonsByKey = {};
+
+  function slotKey(dayLabel, timeLabel) { return dayLabel + '|' + timeLabel; }
+
+  function markBooked(dayLabel, timeLabel) {
+    var btn = slotButtonsByKey[slotKey(dayLabel, timeLabel)];
+    if (btn) btn.disabled = true;
+  }
+
+  function loadExistingBookings() {
+    fetch(API_BASE + '/bookings/' + COMPANY_ID)
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        rows.forEach(function (b) { markBooked(b.day_label, b.time_label); });
+      })
+      .catch(function () { /* booking API unreachable — calendar still shows the example data */ });
+  }
+
+  var BOOKING_DAYS = [
+    { label: 'Tisdag', date: '26/8', slots: [
+      { time: '10:00', open: false }, { time: '11:30', open: true }, { time: '13:00', open: false },
+      { time: '14:30', open: true }, { time: '16:00', open: true }, { time: '17:30', open: false }
+    ] },
+    { label: 'Onsdag', date: '27/8', slots: [
+      { time: '10:00', open: true }, { time: '11:30', open: false }, { time: '13:00', open: true },
+      { time: '14:30', open: false }, { time: '16:00', open: false }, { time: '17:30', open: true }
+    ] },
+    { label: 'Torsdag', date: '28/8', slots: [
+      { time: '10:00', open: false }, { time: '11:30', open: false }, { time: '13:00', open: true },
+      { time: '14:30', open: true }, { time: '16:00', open: false }, { time: '17:30', open: false }
+    ] },
+    { label: 'Fredag', date: '29/8', slots: [
+      { time: '10:00', open: true }, { time: '11:30', open: true }, { time: '13:00', open: false },
+      { time: '14:30', open: false }, { time: '16:00', open: true }, { time: '17:30', open: false }
+    ] },
+    { label: 'Lördag', date: '30/8', slots: [
+      { time: '10:00', open: false }, { time: '11:00', open: false }, { time: '12:00', open: false },
+      { time: '13:00', open: false }, { time: '14:00', open: false }
+    ] }
+  ];
+
+  var bookingGrid = document.getElementById('bookingGrid');
+  var selectedSlotBtn = null;
+  var selectedLabel = null;
+
+  BOOKING_DAYS.forEach(function (day) {
+    var col = document.createElement('div');
+
+    var dayLabel = document.createElement('div');
+    dayLabel.className = 'booking-day-label';
+    dayLabel.innerHTML = '<span class="d">' + day.label + '</span><span class="date">' + day.date + '</span>';
+    col.appendChild(dayLabel);
+
+    var slotsWrap = document.createElement('div');
+    slotsWrap.className = 'booking-slots';
+    day.slots.forEach(function (slot) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'slot-btn';
+      btn.textContent = slot.time;
+      var fullDayLabel = day.label + ' ' + day.date;
+      slotButtonsByKey[slotKey(fullDayLabel, slot.time)] = btn;
+      if (!slot.open) {
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', function () {
+          if (selectedSlotBtn) selectedSlotBtn.classList.remove('is-selected');
+          btn.classList.add('is-selected');
+          selectedSlotBtn = btn;
+          selectedLabel = fullDayLabel + ', kl. ' + slot.time;
+          openBookingWidget(selectedLabel, fullDayLabel, slot.time, btn);
+        });
+      }
+      slotsWrap.appendChild(btn);
+    });
+    col.appendChild(slotsWrap);
+    bookingGrid.appendChild(col);
+  });
+  loadExistingBookings();
+
+  /* ---------- fake third-party widget: this is Alternativ B from the chat
+     — a mockup of what handing off to an embedded Bokadirekt-style widget
+     for the final step would feel like. Invented look, not a real
+     integration, nothing here contacts any real service. ---------- */
+  var bdBackdrop = document.getElementById('bdBackdrop');
+  var bdSlotLine = document.getElementById('bdSlotLine');
+  var bdConfirm = document.getElementById('bdConfirm');
+  var bdClose = document.getElementById('bdClose');
+  var bdSuccessLine = document.getElementById('bdSuccessLine');
+  var bdName = document.getElementById('bdName');
+  var bdPhone = document.getElementById('bdPhone');
+
+  var pendingDayLabel = null, pendingTimeLabel = null, pendingBtn = null;
+
+  function openBookingWidget(label, dayLabel, timeLabel, btn) {
+    pendingDayLabel = dayLabel;
+    pendingTimeLabel = timeLabel;
+    pendingBtn = btn;
+    bdBackdrop.classList.remove('is-done');
+    bdSlotLine.textContent = label;
+    bdName.value = '';
+    bdPhone.value = '';
+    bdConfirm.disabled = false;
+    bdConfirm.textContent = 'Bekräfta bokning';
+    bdBackdrop.classList.add('is-open');
+  }
+  function closeBookingWidget() {
+    bdBackdrop.classList.remove('is-open');
+    if (selectedSlotBtn) { selectedSlotBtn.classList.remove('is-selected'); selectedSlotBtn = null; }
+  }
+  bdClose.addEventListener('click', closeBookingWidget);
+  bdBackdrop.addEventListener('click', function (e) { if (e.target === bdBackdrop) closeBookingWidget(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && bdBackdrop.classList.contains('is-open')) closeBookingWidget();
+  });
+  bdConfirm.addEventListener('click', function () {
+    bdConfirm.disabled = true;
+    bdConfirm.textContent = 'Bokar…';
+    fetch(API_BASE + '/bookings/' + COMPANY_ID, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dayLabel: pendingDayLabel,
+        timeLabel: pendingTimeLabel,
+        customerName: bdName.value,
+        customerPhone: bdPhone.value
+      })
+    })
+      .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          bdSuccessLine.textContent = 'Bokat: ' + selectedLabel;
+          bdBackdrop.classList.add('is-done');
+          if (pendingBtn) pendingBtn.disabled = true;
+        } else {
+          bdSuccessLine.textContent = res.body.error || 'Kunde inte boka den tiden.';
+          bdBackdrop.classList.add('is-done');
+          if (pendingBtn) pendingBtn.disabled = true;
+        }
+      })
+      .catch(function () {
+        bdSuccessLine.textContent = 'Kunde inte nå bokningssystemet just nu.';
+        bdBackdrop.classList.add('is-done');
+        bdConfirm.disabled = false;
+        bdConfirm.textContent = 'Bekräfta bokning';
+      });
+  });
+
+  /* ---------- hero canvas: soft flowing strand field ---------- */
+  var strands = [], W, H, DPR;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.offsetWidth; H = canvas.offsetHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buildStrands();
+  }
+  function buildStrands() {
+    strands = [];
+    var count = Math.round(W / 34);
+    for (var i = 0; i < count; i++) {
+      var baseX = (i / count) * W * 1.1 - W * 0.05;
+      var sweepPhase = (baseX / W) * Math.PI * 1.6;
+      strands.push({
+        x: baseX,
+        amp: 22 + Math.random() * 20,
+        freq: 0.85 + Math.random() * 0.3,
+        phase: sweepPhase + Math.random() * 0.5,
+        speed: 0.045 + Math.random() * 0.025,
+        width: Math.random() < 0.12 ? 1.3 : 0.8,
+        tone: Math.random() < 0.14 ? 'accent' : 'ink'
+      });
+    }
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    strands.forEach(function (s) {
+      ctx.beginPath();
+      var steps = 40;
+      for (var i = 0; i <= steps; i++) {
+        var yT = i / steps, y = yT * H;
+        var envelope = Math.min(1, yT * 2.5);
+        var sway = Math.sin(yT * Math.PI * s.freq + s.phase + t * s.speed) * s.amp * envelope;
+        var x = s.x + sway;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      var alpha = s.tone === 'accent' ? 0.16 : 0.11;
+      ctx.strokeStyle = s.tone === 'accent' ? 'rgba(124, 37, 54, ' + alpha + ')' : 'rgba(33, 28, 21, ' + alpha + ')';
+      ctx.lineWidth = s.width;
+      ctx.stroke();
+    });
+  }
+  var start = null;
+  function frame(ts) {
+    if (start === null) start = ts;
+    draw((ts - start) / 1000);
+    if (!reduceMotion) requestAnimationFrame(frame);
+  }
+  window.addEventListener('resize', resize, { passive: true });
+  resize();
+  if (reduceMotion) draw(0); else requestAnimationFrame(frame);
+</script>
+</body>
+</html>
