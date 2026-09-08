@@ -1,0 +1,189 @@
+/*
+ * AIOS site-kit — shared, deterministic interaction patterns (star ratings,
+ * count-up numbers, scroll reveals, hero name write-in). Identical bytes on
+ * every generated site, same as the brand fonts — never written by the
+ * model itself, so the bugs found and fixed during the 2026-08-26 Lund
+ * design pass (a fractional star's fill layer needing its own `position:
+ * absolute` box, the name-write gradient needing its padding on the text
+ * element itself rather than its wrapper) can never regress per company.
+ *
+ * Colors come from each site's own palette via var(--accent)/
+ * var(--ink-faint) with sane fallbacks — nothing in here is Lund-specific.
+ */
+
+.star-empty path { fill: none; stroke: var(--ink-faint, #999); stroke-width: 1.5; }
+.star-fill path { fill: var(--accent, #333); }
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.reveal.is-visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+/*
+ * .name-pin REQUIRES the page's own header to be `position: fixed`, never
+ * `position: sticky` or static. A sticky/static header occupies space in
+ * normal flow, pushing .name-pin-inner's starting position down by the
+ * header's own height — .name-pin-inner's sticky positioning then can't
+ * engage until the page has scrolled past THAT offset too, which shows up
+ * as a dead zone (the page visibly scrolls for the header's height before
+ * the fill/pin visibly does anything). A fixed header sits outside normal
+ * flow entirely (typically transparent, going solid via the .is-scrolled
+ * class this file toggles automatically — see wireHeaderScrollState()
+ * below), so .name-pin-inner starts at y=0 and the fill begins on the very
+ * first scroll pixel. Found and fixed 2026-08-26.
+ */
+.name-pin {
+  position: relative;
+  height: calc(100svh + 480px); /* the extra 480px is the scroll budget the name-write fill consumes while pinned — keep in sync with the 480 in site-kit.js */
+}
+@media (prefers-reduced-motion: reduce) { .name-pin { height: 100svh; } }
+
+.name-pin-inner {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (prefers-reduced-motion: reduce) { .name-pin-inner { position: static; } }
+
+.name-write {
+  display: block;
+  text-align: center;
+  /* Padding lives on THIS element, not .name-pin/.name-pin-inner —
+     background-clip:text paints relative to its own box, so a script/
+     display font's swashes and ascenders need their safety margin here or
+     they render outside the gradient's paint area and never pick up color. */
+  padding: 0.4em 0.6em 0.1em;
+  background-image: linear-gradient(
+    90deg,
+    var(--accent, #333) 0%,
+    var(--accent, #333) var(--fill, 0%),
+    var(--ink-faint, #999) var(--fill, 0%),
+    var(--ink-faint, #999) 100%
+  );
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--ink-faint, #999); /* fallback if background-clip:text isn't supported */
+  -webkit-text-fill-color: transparent;
+}
+
+/* Image variant of the write-in effect — for when a company has a real
+   logo (see websiteAgent.ts's logoBlock()) and it should be the thing that
+   "gets color" while scrolling, instead of plain text. Same base+color
+   two-layer clip-path technique as the star ratings, not background-clip
+   (which only works on text glyphs, not a raster image). Both <img> tags
+   reference the SAME logo file — the desaturation is a live CSS filter,
+   not a second pre-rendered asset. */
+.name-write-img { position: relative; display: inline-block; max-width: min(58vw, 420px); }
+.name-write-img img { display: block; width: 100%; height: auto; }
+.name-write-img .base { filter: grayscale(1) brightness(0.65); opacity: 0.75; }
+.name-write-img .color {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain;
+  clip-path: inset(0 100% 0 0);
+}
+
+/* ============================================================
+ * Booking calendar + third-party widget handoff mockup — added
+ * 2026-08-26. Shows a week of example time slots in the site's OWN
+ * design, then hands off to a small modal styled to look like a generic
+ * booking platform (deliberately NOT using --accent/--ink-faint — the
+ * whole point is that this step visibly belongs to a different system).
+ * Illustrative only: slot data is written directly in each site's own
+ * HTML (see websiteAgent.ts's siteKitBlock()), nothing here ever creates
+ * a real booking or contacts a real service.
+ * ============================================================ */
+
+.booking-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: clamp(1rem, 2.5vw, 2rem); }
+.booking-day-label { text-align: center; margin-bottom: 1.1rem; }
+.booking-day-label .d { font-weight: 600; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.booking-day-label .date { display: block; font-size: 0.76rem; opacity: 0.6; margin-top: 0.2rem; }
+.booking-slots { display: flex; flex-direction: column; gap: 0.65rem; }
+.slot-btn {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  border: 1px solid var(--ink-faint, #999);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.slot-btn:hover:not(:disabled) { border-color: var(--accent, #333); }
+.slot-btn:disabled { opacity: 0.4; text-decoration: line-through; cursor: default; }
+.slot-btn.is-selected { background: var(--accent, #333); border-color: var(--accent, #333); color: #fff; }
+
+.bd-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(15, 20, 18, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.bd-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.bd-modal {
+  width: 100%; max-width: 380px;
+  background: #ffffff;
+  border-radius: 14px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  transform: translateY(14px) scale(0.98);
+  transition: transform 0.25s ease;
+}
+.bd-backdrop.is-open .bd-modal { transform: translateY(0) scale(1); }
+.bd-header {
+  background: #0f4c3d; color: #fff;
+  padding: 1rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.bd-brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+.bd-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: #4fd8a8; }
+.bd-close { background: none; border: 0; color: rgba(255, 255, 255, 0.8); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.25rem; }
+.bd-close:hover { color: #fff; }
+.bd-body { padding: 1.25rem 1.25rem 1.5rem; }
+.bd-disclaimer {
+  font-size: 0.68rem; color: #8a8f8d; background: #f2f4f3;
+  border-radius: 6px; padding: 0.45rem 0.6rem; margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.bd-slot-summary { font-size: 0.95rem; color: #16211c; margin-bottom: 1rem; }
+.bd-slot-summary strong { display: block; font-size: 1.05rem; margin-bottom: 0.15rem; }
+.bd-field { margin-bottom: 0.85rem; }
+.bd-field label { display: block; font-size: 0.76rem; color: #5b625f; margin-bottom: 0.3rem; }
+.bd-field input {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid #d7dcda; border-radius: 8px;
+  padding: 0.6rem 0.7rem; font-size: 0.92rem; font-family: inherit; color: #16211c;
+}
+.bd-field input:focus { outline: none; border-color: #0f4c3d; box-shadow: 0 0 0 3px rgba(15, 76, 61, 0.14); }
+.bd-confirm-btn {
+  width: 100%; border: 0; border-radius: 8px;
+  background: #0f4c3d; color: #fff;
+  padding: 0.8rem; font-size: 0.95rem; font-weight: 600; font-family: inherit;
+  cursor: pointer; margin-top: 0.3rem;
+  transition: background-color 0.2s ease;
+}
+.bd-confirm-btn:hover { background: #123f34; }
+.bd-success { display: none; text-align: center; padding: 0.5rem 0 0.25rem; }
+.bd-success .check {
+  width: 42px; height: 42px; border-radius: 50%; background: #e6f6ef; color: #0f4c3d;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-size: 1.3rem;
+}
+.bd-success p { font-size: 0.92rem; color: #16211c; margin-bottom: 0.3rem; }
+.bd-success .fine { font-size: 0.76rem; color: #8a8f8d; }
+.bd-backdrop.is-done .bd-form { display: none; }
+.bd-backdrop.is-done .bd-success { display: block; }
+
+@media (max-width: 620px) {
+  .booking-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .booking-slots { flex-direction: row; flex-wrap: wrap; }
+  .slot-btn { flex: 1 1 30%; }
+}
