@@ -286,6 +286,29 @@
   .slot-btn:disabled { color: var(--ink-faint); border-color: var(--stone); opacity: 0.45; cursor: default; text-decoration: line-through; }
   .slot-btn.is-selected { background: var(--oxblood); border-color: var(--oxblood); color: var(--paper); }
 
+  /* rolling booking calendar (2026-09-09) — quiet, generous, no gimmicks */
+  .booking-cal-head { display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-bottom: 2rem; }
+  .booking-cal-range { font-family: var(--font-body); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); min-width: 12ch; text-align: center; }
+  .booking-cal-nav {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--stone);
+    background: transparent; color: var(--ink); font-size: 1.1rem; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.25s cubic-bezier(0.16,1,0.3,1), color 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  .booking-cal-nav:hover { border-color: var(--oxblood); color: var(--oxblood); box-shadow: 0 0 0 5px var(--oxblood-tint); }
+  .booking-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.9rem; transition: opacity 0.3s ease; }
+  .booking-cal-grid.is-loading { opacity: 0.4; }
+  .booking-cal-day { background: var(--paper-2); border: 1px solid var(--stone); border-radius: 12px; padding: 1.1rem 0.6rem; display: flex; flex-direction: column; gap: 0.7rem; transition: border-color 0.3s ease; }
+  .booking-cal-day.is-today { border-color: var(--oxblood); }
+  .booking-cal-day-head { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--stone); }
+  .booking-cal-day-head .wd { font-family: var(--font-body); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
+  .booking-cal-day-head .dt { font-family: var(--font-display); font-size: 1.3rem; color: var(--ink); }
+  .booking-cal-day.is-today .booking-cal-day-head .dt { color: var(--oxblood); }
+  .booking-cal-slots { display: flex; flex-direction: column; gap: 0.5rem; }
+  .booking-cal-slots .slot-btn { padding: 0.5rem 0.3rem; font-size: 0.78rem; }
+  .booking-cal-closed { display: block; text-align: center; font-family: var(--font-body); font-size: 0.76rem; color: var(--ink-faint); font-style: italic; padding: 0.7rem 0; }
+  @media (max-width: 780px) { .booking-cal-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); } }
+
   /* ---------------------------------- fake third-party widget mockup ----------------------------------
      Deliberately NOT Lund's own design language (different fonts, different
      colors, rounder corners) — the whole point is to show how it would jar
@@ -531,20 +554,37 @@
     <div class="container">
       <div class="booking-head reveal">
         <h2 class="booking-title">Boka tid</h2>
-        <p class="eyebrow">Denna vecka — hos Klara</p>
+        <p class="eyebrow">Välj en ledig tid, direkt hos oss</p>
       </div>
-      <div class="booking-grid reveal" id="bookingGrid"></div>
+      <div class="reveal" id="bookingCal" data-company-id="f39015e5-6d2f-413e-9696-3f8cc32d538b" data-api-base="http://localhost:3000">
+        <script type="application/json" id="bookingSchedule">
+          {"slotMinutes": 30, "weekly": {
+            "0": null,
+            "1": null,
+            "2": {"open": "10:00", "close": "18:00"},
+            "3": {"open": "10:00", "close": "18:00"},
+            "4": {"open": "10:00", "close": "18:00"},
+            "5": {"open": "10:00", "close": "18:00"},
+            "6": {"open": "10:00", "close": "14:00"}
+          }}
+        </script>
+        <div class="booking-cal-head">
+          <button class="booking-cal-nav" type="button" data-dir="-1" aria-label="Föregående vecka">‹</button>
+          <span class="booking-cal-range" id="bookingCalRange"></span>
+          <button class="booking-cal-nav" type="button" data-dir="1" aria-label="Nästa vecka">›</button>
+        </div>
+        <div class="booking-cal-grid" id="bookingCalGrid"></div>
+      </div>
     </div>
   </section>
 
   <div class="bd-backdrop" id="bdBackdrop">
     <div class="bd-modal" role="dialog" aria-modal="true" aria-label="Bokning">
       <div class="bd-header">
-        <div class="bd-brand"><span class="dot" aria-hidden="true"></span>bokadirekt</div>
+        <div class="bd-brand"><span class="dot" aria-hidden="true"></span>Salong Lund</div>
         <button class="bd-close" id="bdClose" type="button" aria-label="Stäng">&times;</button>
       </div>
       <div class="bd-body">
-        <p class="bd-disclaimer">Exempel — påhittat utseende, inte Bokadirekts verkliga design. Ingen riktig bokning skapas.</p>
         <div class="bd-form">
           <div class="bd-slot-summary">
             <strong id="bdSlotLine">—</strong>
@@ -557,7 +597,7 @@
         <div class="bd-success">
           <div class="check" aria-hidden="true">&#10003;</div>
           <p id="bdSuccessLine">Bokat!</p>
-          <p class="fine">En bekräftelse skickas via SMS.</p>
+          <p class="fine">Vi ser fram emot ditt besök.</p>
         </div>
       </div>
     </div>
@@ -760,160 +800,174 @@
     }
   });
 
-  /* ---------- booking calendar — connected to our own booking API
-     (2026-09-08): a click really POSTs to /bookings/:companyId on our own
-     backend and the slot is disabled for everyone from then on. No
-     third-party widget, no AI/agent call involved — just a normal
-     database write. ---------- */
-  var COMPANY_ID = 'f39015e5-6d2f-413e-9696-3f8cc32d538b';
-  var API_BASE = 'http://localhost:3000';
-  var slotButtonsByKey = {};
+  /* ---------- rolling booking calendar (2026-09-09) — real dates computed
+     fresh on every page load from a RECURRING weekly schedule (never a
+     fixed list of dates that goes stale), real POSTs to our own backend,
+     a real UNIQUE constraint in the database preventing double-booking.
+     This inline copy mirrors site-kit.js's wireBookingCalendar() — Salong
+     Lund's page predates the shared external site-kit files and stays
+     self-contained, but the logic (and the bug fixes in it) is identical.
+     ---------- */
+  (function () {
+    var root = document.getElementById('bookingCal');
+    var scheduleEl = document.getElementById('bookingSchedule');
+    var backdrop = document.getElementById('bdBackdrop');
+    if (!root || !scheduleEl || !backdrop) return;
 
-  function slotKey(dayLabel, timeLabel) { return dayLabel + '|' + timeLabel; }
+    var schedule = JSON.parse(scheduleEl.textContent);
+    var companyId = root.getAttribute('data-company-id');
+    var apiBase = root.getAttribute('data-api-base') || '';
+    var slotMinutes = schedule.slotMinutes || 30;
+    var weekly = schedule.weekly || {};
 
-  function markBooked(dayLabel, timeLabel) {
-    var btn = slotButtonsByKey[slotKey(dayLabel, timeLabel)];
-    if (btn) btn.disabled = true;
-  }
+    var grid = document.getElementById('bookingCalGrid');
+    var rangeLabel = document.getElementById('bookingCalRange');
+    var navBtns = root.querySelectorAll('.booking-cal-nav');
+    var weekOffset = 0;
 
-  function loadExistingBookings() {
-    fetch(API_BASE + '/bookings/' + COMPANY_ID)
-      .then(function (r) { return r.json(); })
-      .then(function (rows) {
-        rows.forEach(function (b) { markBooked(b.day_label, b.time_label); });
-      })
-      .catch(function () { /* booking API unreachable — calendar still shows the example data */ });
-  }
+    var slotLine = document.getElementById('bdSlotLine');
+    var nameInput = document.getElementById('bdName');
+    var phoneInput = document.getElementById('bdPhone');
+    var closeBtn = document.getElementById('bdClose');
+    var confirmBtn = document.getElementById('bdConfirm');
+    var successLine = document.getElementById('bdSuccessLine');
+    var pending = null;
 
-  var BOOKING_DAYS = [
-    { label: 'Tisdag', date: '26/8', slots: [
-      { time: '10:00', open: false }, { time: '11:30', open: true }, { time: '13:00', open: false },
-      { time: '14:30', open: true }, { time: '16:00', open: true }, { time: '17:30', open: false }
-    ] },
-    { label: 'Onsdag', date: '27/8', slots: [
-      { time: '10:00', open: true }, { time: '11:30', open: false }, { time: '13:00', open: true },
-      { time: '14:30', open: false }, { time: '16:00', open: false }, { time: '17:30', open: true }
-    ] },
-    { label: 'Torsdag', date: '28/8', slots: [
-      { time: '10:00', open: false }, { time: '11:30', open: false }, { time: '13:00', open: true },
-      { time: '14:30', open: true }, { time: '16:00', open: false }, { time: '17:30', open: false }
-    ] },
-    { label: 'Fredag', date: '29/8', slots: [
-      { time: '10:00', open: true }, { time: '11:30', open: true }, { time: '13:00', open: false },
-      { time: '14:30', open: false }, { time: '16:00', open: true }, { time: '17:30', open: false }
-    ] },
-    { label: 'Lördag', date: '30/8', slots: [
-      { time: '10:00', open: false }, { time: '11:00', open: false }, { time: '12:00', open: false },
-      { time: '13:00', open: false }, { time: '14:00', open: false }
-    ] }
-  ];
+    var WEEKDAY_SHORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+    var MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-  var bookingGrid = document.getElementById('bookingGrid');
-  var selectedSlotBtn = null;
-  var selectedLabel = null;
-
-  BOOKING_DAYS.forEach(function (day) {
-    var col = document.createElement('div');
-
-    var dayLabel = document.createElement('div');
-    dayLabel.className = 'booking-day-label';
-    dayLabel.innerHTML = '<span class="d">' + day.label + '</span><span class="date">' + day.date + '</span>';
-    col.appendChild(dayLabel);
-
-    var slotsWrap = document.createElement('div');
-    slotsWrap.className = 'booking-slots';
-    day.slots.forEach(function (slot) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'slot-btn';
-      btn.textContent = slot.time;
-      var fullDayLabel = day.label + ' ' + day.date;
-      slotButtonsByKey[slotKey(fullDayLabel, slot.time)] = btn;
-      if (!slot.open) {
-        btn.disabled = true;
-      } else {
-        btn.addEventListener('click', function () {
-          if (selectedSlotBtn) selectedSlotBtn.classList.remove('is-selected');
-          btn.classList.add('is-selected');
-          selectedSlotBtn = btn;
-          selectedLabel = fullDayLabel + ', kl. ' + slot.time;
-          openBookingWidget(selectedLabel, fullDayLabel, slot.time, btn);
-        });
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    function startOfWeek(offset) {
+      var d = new Date();
+      d.setHours(0, 0, 0, 0);
+      var day = d.getDay();
+      d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day) + offset * 7);
+      return d;
+    }
+    function fmtRange(monday) {
+      var sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      if (monday.getMonth() === sunday.getMonth()) {
+        return monday.getDate() + '–' + sunday.getDate() + ' ' + MONTHS_SHORT[monday.getMonth()];
       }
-      slotsWrap.appendChild(btn);
-    });
-    col.appendChild(slotsWrap);
-    bookingGrid.appendChild(col);
-  });
-  loadExistingBookings();
+      return monday.getDate() + ' ' + MONTHS_SHORT[monday.getMonth()] + ' – ' + sunday.getDate() + ' ' + MONTHS_SHORT[sunday.getMonth()];
+    }
+    function slotsForDay(dayOfWeek) {
+      var hours = weekly[String(dayOfWeek)];
+      if (!hours) return [];
+      var op = hours.open.split(':').map(Number), cl = hours.close.split(':').map(Number);
+      var startMin = op[0] * 60 + op[1], endMin = cl[0] * 60 + cl[1];
+      var out = [];
+      for (var t = startMin; t + slotMinutes <= endMin; t += slotMinutes) out.push(pad(Math.floor(t / 60)) + ':' + pad(t % 60));
+      return out;
+    }
 
-  /* ---------- fake third-party widget: this is Alternativ B from the chat
-     — a mockup of what handing off to an embedded Bokadirekt-style widget
-     for the final step would feel like. Invented look, not a real
-     integration, nothing here contacts any real service. ---------- */
-  var bdBackdrop = document.getElementById('bdBackdrop');
-  var bdSlotLine = document.getElementById('bdSlotLine');
-  var bdConfirm = document.getElementById('bdConfirm');
-  var bdClose = document.getElementById('bdClose');
-  var bdSuccessLine = document.getElementById('bdSuccessLine');
-  var bdName = document.getElementById('bdName');
-  var bdPhone = document.getElementById('bdPhone');
-
-  var pendingDayLabel = null, pendingTimeLabel = null, pendingBtn = null;
-
-  function openBookingWidget(label, dayLabel, timeLabel, btn) {
-    pendingDayLabel = dayLabel;
-    pendingTimeLabel = timeLabel;
-    pendingBtn = btn;
-    bdBackdrop.classList.remove('is-done');
-    bdSlotLine.textContent = label;
-    bdName.value = '';
-    bdPhone.value = '';
-    bdConfirm.disabled = false;
-    bdConfirm.textContent = 'Bekräfta bokning';
-    bdBackdrop.classList.add('is-open');
-  }
-  function closeBookingWidget() {
-    bdBackdrop.classList.remove('is-open');
-    if (selectedSlotBtn) { selectedSlotBtn.classList.remove('is-selected'); selectedSlotBtn = null; }
-  }
-  bdClose.addEventListener('click', closeBookingWidget);
-  bdBackdrop.addEventListener('click', function (e) { if (e.target === bdBackdrop) closeBookingWidget(); });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && bdBackdrop.classList.contains('is-open')) closeBookingWidget();
-  });
-  bdConfirm.addEventListener('click', function () {
-    bdConfirm.disabled = true;
-    bdConfirm.textContent = 'Bokar…';
-    fetch(API_BASE + '/bookings/' + COMPANY_ID, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        dayLabel: pendingDayLabel,
-        timeLabel: pendingTimeLabel,
-        customerName: bdName.value,
-        customerPhone: bdPhone.value
-      })
-    })
-      .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
-      .then(function (res) {
-        if (res.ok) {
-          bdSuccessLine.textContent = 'Bokat: ' + selectedLabel;
-          bdBackdrop.classList.add('is-done');
-          if (pendingBtn) pendingBtn.disabled = true;
-        } else {
-          bdSuccessLine.textContent = res.body.error || 'Kunde inte boka den tiden.';
-          bdBackdrop.classList.add('is-done');
-          if (pendingBtn) pendingBtn.disabled = true;
-        }
-      })
-      .catch(function () {
-        bdSuccessLine.textContent = 'Kunde inte nå bokningssystemet just nu.';
-        bdBackdrop.classList.add('is-done');
-        bdConfirm.disabled = false;
-        bdConfirm.textContent = 'Bekräfta bokning';
+    function openModal(dateStr, timeLabel, btn) {
+      pending = { dateStr: dateStr, timeLabel: timeLabel, btn: btn };
+      var d = new Date(dateStr + 'T00:00:00');
+      backdrop.classList.remove('is-done');
+      if (slotLine) slotLine.textContent = WEEKDAY_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ', kl. ' + timeLabel;
+      if (nameInput) nameInput.value = '';
+      if (phoneInput) phoneInput.value = '';
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Bekräfta bokning'; }
+      backdrop.classList.add('is-open');
+    }
+    function closeModal() { backdrop.classList.remove('is-open'); }
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && backdrop.classList.contains('is-open')) closeModal(); });
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', function () {
+        if (!pending) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Bokar…';
+        fetch(apiBase + '/bookings/' + companyId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingDate: pending.dateStr, timeLabel: pending.timeLabel, customerName: nameInput ? nameInput.value : '', customerPhone: phoneInput ? phoneInput.value : '' })
+        })
+          .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+          .then(function (res) {
+            backdrop.classList.add('is-done');
+            if (res.ok) {
+              if (successLine) successLine.textContent = 'Bokat: ' + slotLine.textContent;
+              if (pending.btn) pending.btn.disabled = true;
+            } else {
+              if (successLine) successLine.textContent = res.body.error || 'Kunde inte boka den tiden.';
+              render();
+            }
+          })
+          .catch(function () {
+            backdrop.classList.remove('is-open');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Bekräfta bokning';
+            if (successLine) successLine.textContent = 'Kunde inte nå bokningssystemet just nu.';
+          });
       });
-  });
+    }
+
+    function renderGrid(days, existing) {
+      var taken = {};
+      existing.forEach(function (b) { taken[b.booking_date + '|' + b.time_label] = true; });
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      grid.innerHTML = '';
+      days.forEach(function (d) {
+        var dateStr = isoDate(d);
+        var col = document.createElement('div');
+        col.className = 'booking-cal-day' + (dateStr === isoDate(today) ? ' is-today' : '');
+        var head = document.createElement('div');
+        head.className = 'booking-cal-day-head';
+        head.innerHTML = '<span class="wd">' + WEEKDAY_SHORT[d.getDay()] + '</span><span class="dt">' + d.getDate() + '</span>';
+        col.appendChild(head);
+        var slotsWrap = document.createElement('div');
+        slotsWrap.className = 'booking-cal-slots';
+        var slots = slotsForDay(d.getDay());
+        var isPast = d < today;
+        if (slots.length === 0) {
+          var closed = document.createElement('span');
+          closed.className = 'booking-cal-closed';
+          closed.textContent = 'Stängt';
+          slotsWrap.appendChild(closed);
+        } else {
+          slots.forEach(function (time) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'slot-btn';
+            btn.textContent = time;
+            if (isPast || taken[dateStr + '|' + time]) btn.disabled = true;
+            else btn.addEventListener('click', function () { openModal(dateStr, time, btn); });
+            slotsWrap.appendChild(btn);
+          });
+        }
+        col.appendChild(slotsWrap);
+        grid.appendChild(col);
+      });
+    }
+
+    function render() {
+      var monday = startOfWeek(weekOffset);
+      if (rangeLabel) rangeLabel.textContent = fmtRange(monday);
+      var days = [];
+      for (var i = 0; i < 7; i++) { var d = new Date(monday); d.setDate(d.getDate() + i); days.push(d); }
+      grid.classList.add('is-loading');
+      fetch(apiBase + '/bookings/' + companyId + '?from=' + isoDate(days[0]) + '&to=' + isoDate(days[6]))
+        .then(function (r) { return r.json(); })
+        .then(function (existing) { renderGrid(days, existing || []); })
+        .catch(function () { renderGrid(days, []); })
+        .then(function () { grid.classList.remove('is-loading'); });
+    }
+
+    navBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        weekOffset += parseInt(btn.getAttribute('data-dir'), 10) || 0;
+        if (weekOffset < 0) weekOffset = 0;
+        render();
+      });
+    });
+
+    render();
+  })();
 
   /* ---------- hero canvas: soft flowing strand field ---------- */
   var strands = [], W, H, DPR;
