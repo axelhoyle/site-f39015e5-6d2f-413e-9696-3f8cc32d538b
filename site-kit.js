@@ -129,7 +129,12 @@
   // anywhere, nothing persists past a reload.
   function wireBooking() {
     var backdrop = document.getElementById("bdBackdrop");
-    if (!backdrop) return;
+    // A page using the newer rolling calendar (#bookingCal, see
+    // wireBookingCalendar() below) owns the SAME #bdBackdrop modal for
+    // real — this mockup wiring must not also attach to it, or a click on
+    // "Bekräfta bokning" would both actually POST the booking AND get its
+    // success text overwritten by this function's fake confirm handler.
+    if (!backdrop || document.getElementById("bookingCal")) return;
     var slotLine = document.getElementById("bdSlotLine");
     var nameInput = document.getElementById("bdName");
     var phoneInput = document.getElementById("bdPhone");
@@ -193,12 +198,234 @@
     update();
   }
 
+  // ============================================================
+  // Rolling booking calendar (2026-09-09) — replaces the old per-site
+  // hardcoded BOOKING_DAYS approach (specific dates written once by the
+  // model at generation time, which silently go stale and once caused a
+  // real weekday-mislabeling bug). This version is driven by a RECURRING
+  // WEEKLY schedule (which weekdays/hours the business is open — real,
+  // verified data, never fabricated) and computes actual calendar dates
+  // itself, every time the page loads — so it never goes out of date, and
+  // "next/previous week" is just a small offset, not new fictional data.
+  //
+  // Expected markup (see websiteAgent.ts's siteKitBlock()):
+  //   <section id="bookingCal" data-company-id="..." data-api-base="...">
+  //     <script type="application/json" id="bookingSchedule">
+  //       {"slotMinutes":30,"weekly":{"1":{"open":"10:00","close":"18:00"},...,"0":null}}
+  //     </script>
+  //     <div class="booking-cal-head">
+  //       <button class="booking-cal-nav" data-dir="-1">‹</button>
+  //       <span class="booking-cal-range" id="bookingCalRange"></span>
+  //       <button class="booking-cal-nav" data-dir="1">›</button>
+  //     </div>
+  //     <div class="booking-cal-grid" id="bookingCalGrid"></div>
+  //   </section>
+  //   ...plus the same #bdBackdrop confirmation modal wireBooking() above
+  //   already documents (bdSlotLine/bdName/bdPhone/bdConfirm/bdClose/bdSuccessLine).
+  //
+  // `weekly` keys are JS's own getDay() convention: 0=Sön ... 6=Lör, value
+  // either null (closed) or {open,close} in "HH:MM". This is the ONLY
+  // place in a generated site that ever computes dates or fetches/writes
+  // bookings — the model never hand-rolls this logic per company.
+  function wireBookingCalendar() {
+    var root = document.getElementById("bookingCal");
+    if (!root) return;
+    var scheduleEl = document.getElementById("bookingSchedule");
+    var backdrop = document.getElementById("bdBackdrop");
+    if (!scheduleEl || !backdrop) return;
+
+    var schedule;
+    try { schedule = JSON.parse(scheduleEl.textContent); } catch (e) { return; }
+    var companyId = root.getAttribute("data-company-id");
+    var apiBase = root.getAttribute("data-api-base") || "";
+    var slotMinutes = schedule.slotMinutes || 30;
+    var weekly = schedule.weekly || {};
+
+    var grid = document.getElementById("bookingCalGrid");
+    var rangeLabel = document.getElementById("bookingCalRange");
+    var navBtns = root.querySelectorAll(".booking-cal-nav");
+    var weekOffset = 0;
+
+    var slotLine = document.getElementById("bdSlotLine");
+    var nameInput = document.getElementById("bdName");
+    var phoneInput = document.getElementById("bdPhone");
+    var closeBtn = document.getElementById("bdClose");
+    var confirmBtn = document.getElementById("bdConfirm");
+    var successLine = document.getElementById("bdSuccessLine");
+    var pending = null; // { dateStr, timeLabel, btn }
+
+    var WEEKDAY_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
+    var MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+
+    function startOfWeek(offset) {
+      var d = new Date();
+      d.setHours(0, 0, 0, 0);
+      var day = d.getDay();
+      var mondayDiff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + mondayDiff + offset * 7);
+      return d;
+    }
+
+    function fmtRange(monday) {
+      var sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      if (monday.getMonth() === sunday.getMonth()) {
+        return monday.getDate() + "–" + sunday.getDate() + " " + MONTHS_SHORT[monday.getMonth()];
+      }
+      return monday.getDate() + " " + MONTHS_SHORT[monday.getMonth()] + " – " + sunday.getDate() + " " + MONTHS_SHORT[sunday.getMonth()];
+    }
+
+    function slotsForDay(dayOfWeek) {
+      var hours = weekly[String(dayOfWeek)];
+      if (!hours) return [];
+      var openParts = hours.open.split(":").map(Number);
+      var closeParts = hours.close.split(":").map(Number);
+      var startMin = openParts[0] * 60 + openParts[1];
+      var endMin = closeParts[0] * 60 + closeParts[1];
+      var out = [];
+      for (var t = startMin; t + slotMinutes <= endMin; t += slotMinutes) {
+        out.push(pad(Math.floor(t / 60)) + ":" + pad(t % 60));
+      }
+      return out;
+    }
+
+    function openModal(dateStr, timeLabel, btn) {
+      pending = { dateStr: dateStr, timeLabel: timeLabel, btn: btn };
+      var d = new Date(dateStr + "T00:00:00");
+      backdrop.classList.remove("is-done");
+      if (slotLine) slotLine.textContent = WEEKDAY_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS_SHORT[d.getMonth()] + ", kl. " + timeLabel;
+      if (nameInput) nameInput.value = "";
+      if (phoneInput) phoneInput.value = "";
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Bekräfta bokning"; }
+      backdrop.classList.add("is-open");
+    }
+    function closeModal() {
+      backdrop.classList.remove("is-open");
+    }
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", function (e) { if (e.target === backdrop) closeModal(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && backdrop.classList.contains("is-open")) closeModal();
+    });
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", function () {
+        if (!pending) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Bokar…";
+        fetch(apiBase + "/bookings/" + companyId, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingDate: pending.dateStr,
+            timeLabel: pending.timeLabel,
+            customerName: nameInput ? nameInput.value : "",
+            customerPhone: phoneInput ? phoneInput.value : "",
+          }),
+        })
+          .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+          .then(function (res) {
+            backdrop.classList.add("is-done");
+            if (res.ok) {
+              if (successLine) successLine.textContent = "Bokat: " + slotLine.textContent;
+              if (pending.btn) pending.btn.disabled = true;
+            } else {
+              if (successLine) successLine.textContent = res.body.error || "Kunde inte boka den tiden.";
+              render(); // someone else just took it (or another race) — refresh so the grid reflects reality
+            }
+          })
+          .catch(function () {
+            backdrop.classList.remove("is-open");
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Bekräfta bokning";
+            if (successLine) successLine.textContent = "Kunde inte nå bokningssystemet just nu.";
+          });
+      });
+    }
+
+    function renderGrid(days, existing) {
+      var taken = {};
+      existing.forEach(function (b) { taken[b.booking_date + "|" + b.time_label] = true; });
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      grid.innerHTML = "";
+      days.forEach(function (d) {
+        var dateStr = isoDate(d);
+        var col = document.createElement("div");
+        col.className = "booking-cal-day" + (dateStr === isoDate(today) ? " is-today" : "");
+
+        var head = document.createElement("div");
+        head.className = "booking-cal-day-head";
+        head.innerHTML = "<span class=\"wd\">" + WEEKDAY_SHORT[d.getDay()] + "</span><span class=\"dt\">" + d.getDate() + "</span>";
+        col.appendChild(head);
+
+        var slotsWrap = document.createElement("div");
+        slotsWrap.className = "booking-cal-slots";
+        var slots = slotsForDay(d.getDay());
+        var isPast = d < today;
+
+        if (slots.length === 0) {
+          var closed = document.createElement("span");
+          closed.className = "booking-cal-closed";
+          closed.textContent = "Stängt";
+          slotsWrap.appendChild(closed);
+        } else {
+          slots.forEach(function (time) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "slot-btn";
+            btn.textContent = time;
+            if (isPast || taken[dateStr + "|" + time]) {
+              btn.disabled = true;
+            } else {
+              btn.addEventListener("click", function () { openModal(dateStr, time, btn); });
+            }
+            slotsWrap.appendChild(btn);
+          });
+        }
+        col.appendChild(slotsWrap);
+        grid.appendChild(col);
+      });
+    }
+
+    function render() {
+      var monday = startOfWeek(weekOffset);
+      if (rangeLabel) rangeLabel.textContent = fmtRange(monday);
+      var days = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(monday);
+        d.setDate(d.getDate() + i);
+        days.push(d);
+      }
+      grid.classList.add("is-loading");
+      fetch(apiBase + "/bookings/" + companyId + "?from=" + isoDate(days[0]) + "&to=" + isoDate(days[6]))
+        .then(function (r) { return r.json(); })
+        .then(function (existing) { renderGrid(days, existing || []); })
+        .catch(function () { renderGrid(days, []); })
+        .then(function () { grid.classList.remove("is-loading"); });
+    }
+
+    navBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        weekOffset += parseInt(btn.getAttribute("data-dir"), 10) || 0;
+        if (weekOffset < 0) weekOffset = 0; // never navigate into the past
+        render();
+      });
+    });
+
+    render();
+  }
+
   function init() {
     renderStars();
     wireCountUp();
     wireReveal();
     wireNameWrite();
     wireBooking();
+    wireBookingCalendar();
     wireHeaderScrollState();
   }
 
