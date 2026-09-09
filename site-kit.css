@@ -110,14 +110,55 @@
   padding: 0.75rem 0.5rem;
   text-align: center;
   border: 1px solid var(--ink-faint, #999);
+  border-radius: 8px;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.slot-btn:hover:not(:disabled) { border-color: var(--accent, #333); }
+.slot-btn:hover:not(:disabled) { border-color: var(--accent, #333); box-shadow: 0 4px 14px -6px var(--accent, #333); transform: translateY(-1px); }
 .slot-btn:disabled { opacity: 0.4; text-decoration: line-through; cursor: default; }
 .slot-btn.is-selected { background: var(--accent, #333); border-color: var(--accent, #333); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .slot-btn:hover:not(:disabled) { transform: none; } }
+
+/* ============================================================
+ * Rolling booking calendar (2026-09-09) — the container/grid/nav chrome
+ * around the .slot-btn buttons above. Deliberately restrained: generous
+ * air, one quiet accent, soft motion — a calendar should read as a
+ * considered part of the site, never a bolted-on widget. Uses each site's
+ * own --accent/--ink/--ink-faint/--border/--paper-raised (with sane
+ * fallbacks) so it always matches that company's palette, never a fixed
+ * "booking widget" look.
+ * ============================================================ */
+.booking-cal-head { display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-bottom: 1.75rem; }
+.booking-cal-range { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint, #888); min-width: 11ch; text-align: center; }
+.booking-cal-nav {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border, rgba(0,0,0,0.12));
+  background: transparent; color: var(--ink, inherit); font-size: 1.05rem; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.booking-cal-nav:hover { border-color: var(--accent, #333); color: var(--accent, #333); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, #333) 12%, transparent); }
+
+.booking-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.85rem; transition: opacity 0.25s ease; }
+.booking-cal-grid.is-loading { opacity: 0.45; }
+.booking-cal-day {
+  background: var(--paper-raised, rgba(0,0,0,0.02)); border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 14px; padding: 1rem 0.6rem; display: flex; flex-direction: column; gap: 0.6rem;
+  transition: border-color 0.25s ease;
+}
+.booking-cal-day.is-today { border-color: var(--accent, #333); }
+.booking-cal-day-head { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border, rgba(0,0,0,0.08)); }
+.booking-cal-day-head .wd { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint, #888); }
+.booking-cal-day-head .dt { font-family: var(--font-head, inherit); font-size: 1.2rem; }
+.booking-cal-day.is-today .booking-cal-day-head .dt { color: var(--accent, #333); }
+.booking-cal-slots { display: flex; flex-direction: column; gap: 0.45rem; }
+.booking-cal-slots .slot-btn { padding: 0.5rem 0.35rem; font-size: 0.82rem; }
+.booking-cal-closed { display: block; text-align: center; font-size: 0.78rem; color: var(--ink-faint, #999); padding: 0.6rem 0; font-style: italic; }
+
+@media (max-width: 860px) {
+  .booking-cal-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+}
 
 .bd-backdrop {
   position: fixed; inset: 0; z-index: 200;
