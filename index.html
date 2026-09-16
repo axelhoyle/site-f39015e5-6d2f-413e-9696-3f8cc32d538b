@@ -140,15 +140,6 @@
   .hero canvas {
     position: absolute; inset: -6% -6%; width: 112%; height: 112%;
     opacity: 0.85; will-change: transform;
-    display: none;
-  }
-  .hero::before {
-    content: '';
-    position: absolute; inset: 0;
-    background-image: url('uploads/customer-hero-1788891658347.png');
-    background-size: cover;
-    background-position: 51% 47%;
-    background-repeat: no-repeat;
   }
   .hero-veil {
     position: absolute; inset: 0;
@@ -964,6 +955,17 @@
         if (weekOffset < 0) weekOffset = 0;
         render();
       });
+    });
+
+    // Auto-refresh (2026-09-09) — see site-kit.js's wireBookingCalendar for
+    // why: a booking made/moved elsewhere never pushes to an already-open
+    // page. Double-booking itself is still impossible regardless (the
+    // database's UNIQUE constraint), this only fixes the stale display.
+    setInterval(function () {
+      if (!backdrop.classList.contains('is-open')) render();
+    }, 20000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && !backdrop.classList.contains('is-open')) render();
     });
 
     render();
