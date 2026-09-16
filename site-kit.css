@@ -130,6 +130,14 @@
  * fallbacks) so it always matches that company's palette, never a fixed
  * "booking widget" look.
  * ============================================================ */
+.booking-cal-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-bottom: 1.5rem; }
+.booking-cal-controls select {
+  font-family: inherit; font-size: 0.85rem; padding: 0.55rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--border, rgba(0,0,0,0.14)); background: var(--paper-raised, #fff); color: var(--ink, inherit);
+  cursor: pointer; max-width: 100%;
+}
+.booking-cal-next-available { text-align: center; margin-top: 1.25rem; font-size: 0.86rem; color: var(--ink-faint, #888); }
+.booking-cal-next-available .chip-link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--accent, #333); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .booking-cal-head { display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-bottom: 1.75rem; }
 .booking-cal-range { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint, #888); min-width: 11ch; text-align: center; }
 .booking-cal-nav {
@@ -181,7 +189,7 @@
 }
 .bd-backdrop.is-open .bd-modal { transform: translateY(0) scale(1); }
 .bd-header {
-  background: #0f4c3d; color: #fff;
+  background: var(--accent, #0f4c3d); color: #fff;
   padding: 1rem 1.25rem;
   display: flex; align-items: center; justify-content: space-between;
 }
@@ -204,18 +212,18 @@
   border: 1px solid #d7dcda; border-radius: 8px;
   padding: 0.6rem 0.7rem; font-size: 0.92rem; font-family: inherit; color: #16211c;
 }
-.bd-field input:focus { outline: none; border-color: #0f4c3d; box-shadow: 0 0 0 3px rgba(15, 76, 61, 0.14); }
+.bd-field input:focus { outline: none; border-color: var(--accent, #0f4c3d); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #0f4c3d) 14%, transparent); }
 .bd-confirm-btn {
   width: 100%; border: 0; border-radius: 8px;
-  background: #0f4c3d; color: #fff;
+  background: var(--accent, #0f4c3d); color: #fff;
   padding: 0.8rem; font-size: 0.95rem; font-weight: 600; font-family: inherit;
   cursor: pointer; margin-top: 0.3rem;
-  transition: background-color 0.2s ease;
+  transition: filter 0.2s ease;
 }
-.bd-confirm-btn:hover { background: #123f34; }
+.bd-confirm-btn:hover { filter: brightness(0.9); }
 .bd-success { display: none; text-align: center; padding: 0.5rem 0 0.25rem; }
 .bd-success .check {
-  width: 42px; height: 42px; border-radius: 50%; background: #e6f6ef; color: #0f4c3d;
+  width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--accent, #0f4c3d) 14%, white); color: var(--accent, #0f4c3d);
   display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-size: 1.3rem;
 }
 .bd-success p { font-size: 0.92rem; color: #16211c; margin-bottom: 0.3rem; }
@@ -227,4 +235,114 @@
   .booking-grid { grid-template-columns: 1fr; gap: 1.5rem; }
   .booking-slots { flex-direction: row; flex-wrap: wrap; }
   .slot-btn { flex: 1 1 30%; }
+}
+
+/* ============================================================
+ * Price list with an inline "Boka" button (2026-09-10) — replaces an
+ * always-visible week grid on the page itself. Deliberately restrained: a
+ * "från"-prefixed price in a quiet, faint tone with the actual amount as
+ * the visual focus (real in-salon pricing can vary by what the stylist
+ * actually does — the list shows a floor, not a fixed quote), one Boka
+ * button per row, nothing else competing for attention. Category grouping
+ * (h3 + count) is the site's own markup — these classes only style the
+ * per-service row itself.
+ * ============================================================ */
+.price-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.price-item:last-child { border-bottom: none; }
+.price-item-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.price-item-name { font-family: var(--font-head, inherit); font-size: 1rem; }
+.price-item-duration { font-size: 0.78rem; color: var(--ink-faint, #888); }
+.price-item-price { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; gap: 0.1rem; }
+.price-item-from { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint, #999); }
+.price-item-amount { font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.price-item-book-btn {
+  flex: 0 0 auto;
+  font-family: inherit; font-size: 0.82rem; font-weight: 600;
+  padding: 0.55rem 1.15rem; border-radius: 999px;
+  border: 1px solid var(--accent, #333); background: transparent; color: var(--accent, #333);
+  cursor: pointer; white-space: nowrap;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.price-item-book-btn:hover { background: var(--accent, #333); color: #fff; box-shadow: 0 4px 14px -6px var(--accent, #333); }
+
+@media (max-width: 560px) {
+  .price-item { flex-wrap: wrap; }
+  .price-item-price { order: 2; text-align: left; }
+  .price-item-book-btn { order: 3; margin-left: auto; }
+}
+
+/* ============================================================
+ * Opening-hours list (2026-09-13) — same "always show a complete table,
+ * placeholder or real" principle as .price-item above: a full week list
+ * with an explicit .hours-placeholder marker beats a bare "contact us for
+ * hours" line, both for how the real site reads and for anything (like a
+ * scripted demo/tutorial walkthrough) that later reuses this exact markup.
+ * ============================================================ */
+.hours-list { list-style: none; margin: 1.5rem 0 0; padding: 0; max-width: 420px; border-top: 1px solid var(--border, rgba(0,0,0,0.08)); }
+.hours-list li { display: flex; align-items: baseline; justify-content: space-between; padding: 0.65rem 0.1rem; border-bottom: 1px solid var(--border, rgba(0,0,0,0.08)); font-size: 1rem; }
+.hours-list .hd-day { color: var(--ink-faint, #888); }
+.hours-list .hd-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.hours-list.hours-placeholder .hd-time { color: var(--ink-faint, #888); font-style: italic; font-weight: 500; }
+.hours-placeholder-note { font-size: 0.8rem; color: var(--ink-faint, #888); margin-top: 0.6rem; }
+
+/* ============================================================
+ * Per-service booking widget (2026-09-10) — reuses .booking-cal-head,
+ * -nav, -range, -grid, -day and .slot-btn from the rolling-calendar block
+ * above; this just adds the modal chrome and the two-step (staff -> times) layout.
+ * ============================================================ */
+.booking-widget-backdrop {
+  position: fixed; inset: 0; z-index: 210;
+  background: rgba(15, 20, 18, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.booking-widget-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.booking-widget-modal {
+  position: relative;
+  width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+  background: var(--paper, #fff); color: var(--ink, inherit);
+  border-radius: 16px; padding: 2rem 1.75rem 1.75rem;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  transform: translateY(14px) scale(0.98);
+  transition: transform 0.25s ease;
+}
+.booking-widget-backdrop.is-open .booking-widget-modal { transform: translateY(0) scale(1); }
+.booking-widget-close {
+  position: absolute; top: 0.9rem; right: 0.9rem;
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border, rgba(0,0,0,0.12));
+  background: transparent; color: var(--ink, inherit); font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.booking-widget-service { text-align: center; margin-bottom: 1.5rem; padding-right: 2rem; }
+.booking-widget-service-name { display: block; font-family: var(--font-head, inherit); font-size: 1.3rem; }
+.booking-widget-service-meta { display: block; font-size: 0.82rem; color: var(--ink-faint, #888); margin-top: 0.25rem; }
+.booking-widget-label { display: block; font-size: 0.78rem; color: var(--ink-faint, #888); margin-bottom: 0.5rem; text-align: center; }
+.booking-widget-select {
+  display: block; width: 100%; box-sizing: border-box;
+  font-family: inherit; font-size: 0.92rem; padding: 0.7rem 0.9rem; border-radius: 10px;
+  border: 1px solid var(--border, rgba(0,0,0,0.14)); background: var(--paper-raised, #fff); color: var(--ink, inherit);
+  cursor: pointer; margin-bottom: 1.1rem;
+}
+.booking-widget-search-btn {
+  display: block; width: 100%;
+  font-family: inherit; font-size: 0.92rem; font-weight: 600;
+  padding: 0.8rem; border-radius: 10px; border: none;
+  background: var(--accent, #333); color: #fff; cursor: pointer;
+  transition: filter 0.2s ease;
+}
+.booking-widget-search-btn:hover:not(:disabled) { filter: brightness(0.92); }
+.booking-widget-search-btn:disabled { opacity: 0.7; cursor: default; }
+.booking-widget-back {
+  background: none; border: none; padding: 0; margin-bottom: 1rem;
+  font: inherit; font-size: 0.82rem; color: var(--ink-faint, #888); cursor: pointer;
+}
+.booking-widget-back:hover { color: var(--accent, #333); }
+
+@media (max-width: 620px) {
+  .booking-widget-modal .booking-cal-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 }
