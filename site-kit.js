@@ -533,6 +533,54 @@
   }
 
   /**
+   * Demo mode (2026-09-17) — the booking UI's default state, and the whole
+   * reason it is: a generated site is shown to a PROSPECT (or just previewed
+   * by the agency) long before it's the business's real, live, "actually
+   * bookable" website — at that stage there is no publicly-reachable
+   * backend for a real visitor's browser to hit (see the bookingApiBase()
+   * comment in websiteAgent.ts), and more importantly there SHOULDN'T be
+   * one yet: nothing should actually get booked from a demo. Real feedback:
+   * a prospect clicking "Boka" on the public demo link just hit a dead
+   * network call and got nowhere, looking completely broken — and even
+   * once the network problem is fixed, a demo silently creating REAL
+   * booking rows would be its own bug.
+   *
+   * So every generated site defaults to demo mode (fully client-side,
+   * zero network calls, nothing persisted) UNLESS the booking root element
+   * carries `data-live="true"` — a deliberate, human, later flip (set once
+   * the business is actually operating for real, e.g. via the portal) that
+   * this file otherwise never sets on its own. Demo mode is not a
+   * degraded/error state — it's the same interaction, same choreography,
+   * same two example staff (Anna, Sebastian — the same pair
+   * tutorialVideo.ts already uses, so the tutorial and the live demo site
+   * always tell the same story) — just answered locally instead of over
+   * the network.
+   */
+  var DEMO_STAFF = [
+    { id: "demo-staff-anna", name: "Anna", title: "Personal" },
+    { id: "demo-staff-sebastian", name: "Sebastian", title: "Personal" },
+  ];
+
+  // A handful of plausible, always-available weekday slots — deterministic,
+  // never fabricated as "verified real availability" (the UI around this
+  // never claims otherwise while in demo mode), just enough to make the
+  // flow feel real. Closed Sundays (matches the vast majority of the
+  // businesses this system serves) so the grid still shows a realistic
+  // shape, not "open every day forever".
+  function demoSlotsForDate(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    if (d.getDay() === 0) return [];
+    var all = ["10:00", "11:30", "13:00", "14:30", "16:00"];
+    if (dateStr !== isoDate(new Date())) return all;
+    var now = new Date();
+    var nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return all.filter(function (t) {
+      var hm = t.split(":");
+      return parseInt(hm[0], 10) * 60 + parseInt(hm[1], 10) > nowMinutes + 30;
+    });
+  }
+
+  /**
    * Renders 7 day-columns of slot buttons into `grid`, given a `perDay`
    * map ({dateStr: [times]}, already duration-aware from the availability
    * API — see config/availability.ts's computeAvailableSlots). `onPick(dateStr,
@@ -594,7 +642,7 @@
    * #bdConfirm ever, regardless of which booking UI(s) exist on a given
    * page. Returns null if the page has no #bdBackdrop at all.
    */
-  function createConfirmModal(apiBase, companyId) {
+  function createConfirmModal(apiBase, companyId, isLive) {
     var backdrop = document.getElementById("bdBackdrop");
     if (!backdrop) return null;
     var slotLine = document.getElementById("bdSlotLine");
@@ -627,6 +675,18 @@
         if (!pending) return;
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Bokar…";
+        if (!isLive) {
+          // Demo mode — see the comment above demoSlotsForDate(). Same
+          // pacing as the real path (a brief "Bokar…" beat) but nothing is
+          // ever sent anywhere or persisted.
+          setTimeout(function () {
+            backdrop.classList.add("is-done");
+            if (successLine) successLine.textContent = "Bokat: " + pending.label;
+            if (pending.btn) pending.btn.disabled = true;
+            if (pending.onDone) pending.onDone(true);
+          }, 500);
+          return;
+        }
         fetch(apiBase + "/bookings/" + companyId, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -985,6 +1045,7 @@
 
     var companyId = popup.getAttribute("data-company-id");
     var apiBase = popup.getAttribute("data-api-base") || "";
+    var isLive = popup.getAttribute("data-live") === "true";
 
     var closeBtn = document.getElementById("bookingWidgetClose");
     var stepStaff = document.getElementById("bookingWidgetStepStaff");
@@ -1018,6 +1079,23 @@
     // message instead of a silent dead end.
     function loadStaff() {
       if (staffLoaded) return Promise.resolve();
+      if (!isLive) {
+        staffList = DEMO_STAFF;
+        staffSelect.innerHTML = "";
+        staffSelect.disabled = false;
+        var demoAnyOpt = document.createElement("option");
+        demoAnyOpt.value = "";
+        demoAnyOpt.textContent = "Nästa tillgängliga frisör";
+        staffSelect.appendChild(demoAnyOpt);
+        staffList.forEach(function (s) {
+          var opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = s.name + (s.title ? " — " + s.title : "");
+          staffSelect.appendChild(opt);
+        });
+        staffLoaded = true;
+        return Promise.resolve();
+      }
       return fetch(apiBase + "/bookings/" + companyId + "/staff")
         .then(function (r) { return r.json(); })
         .then(function (rows) {
@@ -1095,6 +1173,12 @@
 
     function onPick(dateStr, timeLabel, btn) {
       var d = new Date(dateStr + "T00:00:00");
+      // Real bug found 2026-09-17 while testing the full flow through to
+      // confirmation: the widget popup was never closed here, so it sat
+      // on top of #bdBackdrop (same fixed full-screen overlay layer) and
+      // silently intercepted every click meant for "Bekräfta bokning" —
+      // looked exactly like the confirm button did nothing.
+      closePopup();
       confirmModal.open({
         label: currentService.name + " — " + WEEKDAY_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS_SHORT[d.getMonth()] + ", kl. " + timeLabel,
         dateStr: dateStr,
@@ -1103,7 +1187,12 @@
         serviceLabel: currentService.name,
         durationMinutes: currentService.durationMinutes,
         btn: btn,
-        onDone: function (ok) { if (!ok) render(); },
+        onDone: function (ok) {
+          if (!ok) {
+            popup.classList.add("is-open"); // failed booking — bring the calendar back so they can pick another time
+            render();
+          }
+        },
       });
     }
 
@@ -1116,6 +1205,17 @@
       link.className = "chip-link-btn";
       link.textContent = "Visa nästa lediga tid";
       link.addEventListener("click", function () {
+        if (!isLive) {
+          var demoTarget = new Date(fromDateStr + "T00:00:00");
+          for (var i = 0; i < 8; i++) {
+            demoTarget.setDate(demoTarget.getDate() + 1);
+            if (demoSlotsForDate(isoDate(demoTarget)).length > 0) break;
+          }
+          var demoMonday = startOfWeek(0);
+          weekOffset = Math.round((demoTarget - demoMonday) / (7 * 24 * 60 * 60 * 1000));
+          render();
+          return;
+        }
         fetch(apiBase + "/bookings/" + companyId + "/next-available?staffId=" + resolvedStaffId + "&durationMinutes=" + currentService.durationMinutes + "&from=" + fromDateStr)
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (next) {
@@ -1142,6 +1242,14 @@
       if (nextAvailEl) nextAvailEl.style.display = "none";
       grid.classList.add("is-loading");
       var duration = currentService.durationMinutes;
+      if (!isLive) {
+        var demoPerDay = {};
+        days.forEach(function (d) { demoPerDay[isoDate(d)] = demoSlotsForDate(isoDate(d)); });
+        var demoOpenCount = renderAvailabilityGrid(grid, days, demoPerDay, onPick);
+        grid.classList.remove("is-loading");
+        if (demoOpenCount === 0) showNextAvailable(isoDate(days[6]));
+        return;
+      }
       Promise.all(
         days.map(function (d) {
           var dateStr = isoDate(d);
@@ -1176,6 +1284,15 @@
 
       if (chosen) {
         resolvedStaffId = chosen;
+        weekOffset = 0;
+        restore();
+        stepStaff.hidden = true;
+        stepTimes.hidden = false;
+        render();
+        return;
+      }
+      if (!isLive) {
+        resolvedStaffId = DEMO_STAFF[0].id;
         weekOffset = 0;
         restore();
         stepStaff.hidden = true;
@@ -1241,6 +1358,22 @@
 
   function wireNextAvailable() {
     document.querySelectorAll(".next-available-note").forEach(function (el) {
+      var isLive = el.getAttribute("data-live") === "true";
+      if (!isLive) {
+        var d = new Date();
+        for (var i = 0; i < 8; i++) {
+          var dateStr = isoDate(d);
+          var slots = demoSlotsForDate(dateStr);
+          if (slots.length > 0) {
+            el.textContent = "Nästa lediga tid: " + formatNextAvailable(dateStr, slots[0]);
+            el.hidden = false;
+            return;
+          }
+          d.setDate(d.getDate() + 1);
+        }
+        el.hidden = true;
+        return;
+      }
       var companyId = el.getAttribute("data-company-id");
       var apiBase = el.getAttribute("data-api-base") || "";
       var duration = el.getAttribute("data-duration-minutes") || "30";
@@ -1275,7 +1408,8 @@
     if (bookingRoot) {
       var confirmModal = createConfirmModal(
         bookingRoot.getAttribute("data-api-base") || "",
-        bookingRoot.getAttribute("data-company-id")
+        bookingRoot.getAttribute("data-company-id"),
+        bookingRoot.getAttribute("data-live") === "true"
       );
       wireBookingCalendar(confirmModal);
       wireBookingWidget(confirmModal);
