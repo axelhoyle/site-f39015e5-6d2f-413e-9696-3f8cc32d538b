@@ -14,6 +14,47 @@
 .star-empty path { fill: none; stroke: var(--ink-faint, #999); stroke-width: 1.5; }
 .star-fill path { fill: var(--accent, #333); }
 
+/*
+ * Flow lines (2026-09-16, scoped to the hero 2026-09-16) — populated
+ * entirely by site-kit.js's wireFlowLines(), which sets each <path>'s
+ * stroke/opacity/width/transform inline (seeded per company). Lives
+ * ONLY inside .hero/.name-pin-inner — NOT a whole-page fixed backdrop
+ * anymore. Real feedback: a full-page fixed version crossed behind body
+ * copy/reviews/prices everywhere and read as noise competing with text
+ * that needs to be read. Scoping it to the hero (a) keeps every other
+ * section's text completely undisturbed and (b) concentrates the "alive"
+ * moment where the page already has one deliberate hero moment (the
+ * name-write scroll-pin), instead of spreading it thin across the page.
+ * Crisp vector strokes only — no blur/filter/gradient fill, ever.
+ */
+.flow-lines { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.flow-line { fill: none; stroke-linecap: round; }
+@media (prefers-reduced-motion: no-preference) {
+  .flow-line { transition: transform 0.05s linear; }
+}
+
+/*
+ * Signature mark (2026-09-16) — small per-section accent that shares
+ * flow-lines' shape family + the same company seed, so it reads as the
+ * same visual signature elsewhere on the page (first use: under the star
+ * rating) without being a second full ambient background. See
+ * wireSignatureMark()'s comment for why this is the mechanism for
+ * cross-section coherence.
+ */
+.signature-mark { display: block; width: 100%; max-width: 220px; height: 24px; margin-top: 0.5rem; overflow: visible; }
+
+/*
+ * Next-available note (2026-09-17) — real, computed availability, never a
+ * fabricated countdown (see wireNextAvailable() in site-kit.js). Starts
+ * hidden (`hidden` attribute) so a slow/failed fetch never flashes empty
+ * text — site-kit.js only reveals it once it actually has a real answer.
+ */
+.next-available-note {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  font-size: 0.85rem; font-weight: 600; color: var(--accent, #333);
+}
+.next-available-note::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent, #333); flex: none; }
+
 .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
 .reveal.is-visible { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
